@@ -94,6 +94,24 @@ decodeTensorYolo(const float* output, const uint& outputSize, const uint& netW, 
   return binfo;
 }
 
+/**
+ * 获取输出框数量，兼容 [N, 6] 与 [B, N, 6] 维度。
+ *
+ * Args:
+ *   output (NvDsInferLayerInfo): 输出层信息。
+ *
+ * Returns:
+ *   (uint): 输出框数量。
+ */
+static uint getOutputSize(const NvDsInferLayerInfo& output)
+{
+  const int numDims = output.inferDims.numDims;  // 维度数量
+  if (numDims >= 2 && output.inferDims.d[numDims - 1] == 6) {
+    return output.inferDims.d[numDims - 2];
+  }
+  return output.inferDims.d[0];
+}
+
 static bool
 NvDsInferParseCustomYolo(std::vector<NvDsInferLayerInfo> const& outputLayersInfo,
     NvDsInferNetworkInfo const& networkInfo, NvDsInferParseDetectionParams const& detectionParams,
@@ -106,8 +124,8 @@ NvDsInferParseCustomYolo(std::vector<NvDsInferLayerInfo> const& outputLayersInfo
 
   std::vector<NvDsInferParseObjectInfo> objects;
 
-  const NvDsInferLayerInfo& output = outputLayersInfo[0];
-  const uint outputSize = output.inferDims.d[0];
+  const NvDsInferLayerInfo& output = outputLayersInfo[0];  // 输出层信息
+  const uint outputSize = getOutputSize(output);  // 输出框数量
 
   std::vector<NvDsInferParseObjectInfo> outObjs = decodeTensorYolo((const float*) (output.buffer), outputSize,
       networkInfo.width, networkInfo.height, detectionParams.perClassPreclusterThreshold);
